@@ -1,10 +1,11 @@
+import os
 import pickle
 
 
-class ResultsWriter(object):
+class FileLogger(object):
     '''Logs results to a file.
 
-    The ResultsWriter provides a convenient interface for periodically writing
+    The FileLogger provides a convenient interface for periodically writing
     results to a file. It is designed to capture all information for a given
     experiment, which may have a sequence of distinct tasks. Therefore, it writes
     results in the format::
@@ -14,7 +15,7 @@ class ResultsWriter(object):
             'results': [...]
         }
 
-    The ResultsWriter class chooses to use a top-level list instead of a dictionary
+    The FileLogger class chooses to use a top-level list instead of a dictionary
     to preserve temporal order of tasks (by default).
 
     Args:
@@ -26,19 +27,19 @@ class ResultsWriter(object):
         >>> for task in ['CIFAR-10', 'SVHN']:
         >>>    train_results = train_model()
         >>>    test_results = test_model()
-        >>>    result_writer.update(task, {'Train': train_results, 'Test': test_results})
+        >>>    result_writer.log(task, {'Train': train_results, 'Test': test_results})
 
     '''
 
     def __init__(self, filepath, overwrite=False):
-        if overwrite:
-            with open(filepath, 'wb') as f:
-                pickle.dump({
-                    'tasks': [],
-                    'results': []
-                }, f)
-        else:
+        if not overwrite:
             assert not os.path.exists(filepath), 'Cannot write results to "{}". Already exists!'.format(filepath)
+        with open(filepath, 'wb') as f:
+            pickle.dump({
+                'tasks': [],
+                'results': []
+            }, f)
+
         self.filepath = filepath
         self.tasks = set()
 
@@ -46,7 +47,7 @@ class ResultsWriter(object):
         assert task_name not in self.tasks, "Task already added! Use a different name."
         self.tasks.add(task_name)
 
-    def update(self, task_name, result):
+    def log(self, task_name, result):
         ''' Update the results file with new information.
 
         Args:
