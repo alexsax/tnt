@@ -1,8 +1,8 @@
 TNT
 ==========
 
-**TNT** is a library providing powerful dataloading, logging and visualization utlities for Python.
-It is closely intergrated with [PyTorch](http://pytorch.org) and is designed to enable rapid iteration with any model 
+**TNT** is a library providing powerful dataloading, logging and visualization utilities for Python.
+It is closely integrated with [PyTorch](http://pytorch.org) and is designed to enable rapid iteration with any model 
 or training regimen.
 
 ![travis](https://travis-ci.org/pytorch/tnt.svg?branch=master) 
@@ -16,13 +16,21 @@ or training regimen.
 
 ## Installation
 
-Make sure you have PyTorch installed, then do:
+TNT can be installed with pip. To do so, run:
+
+```buildoutcfg
+pip install torchnet
+```
+
+If you run into issues, make sure that Pytorch is installed first.
+
+You can also install the latest verstion from master. Just run:
 
 ```buildoutcfg
 pip install git+https://github.com/pytorch/tnt.git@master
 ```
 
-To update:
+To update to the latest version from master:
 
 ```buildoutcfg
 pip install --upgrade git+https://github.com/pytorch/tnt.git@master
