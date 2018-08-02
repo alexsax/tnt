@@ -5,6 +5,28 @@ import visdom
 from .logger import Logger
 
 
+
+class VisdomConnections(object):
+    '''
+        Keeps global track of connections to visdom. This prevents us from new connections each time we want to log a value.
+    '''
+    
+    def __init__(self):
+        self.connections = {}
+        self.log_connections = {}
+        
+    def add(self, server, port, log_to_filename):
+        if (server, port) in self.connections:
+            assert self.log_connections[(server, port)] == log_to_filename, "Cannot set log for {} to {}. Already set to {}!".format(
+                (server, port), log_to_filename, self.log_connections[(server, port)])
+        else:
+            self.connections[(server, port)] = visdom.Visdom(server="http://" + server, port=port, log_to_filename=log_to_filename)
+            self.log_connections[(server, port)] = log_to_filename
+        return self.connections[(server, port)]
+
+
+VISDOM_CONNECTIONS = VisdomConnections()
+
 class BaseVisdomLogger(Logger):
     '''
         The base class for logging output to Visdom.
@@ -22,12 +44,12 @@ class BaseVisdomLogger(Logger):
     def viz(self):
         return self._viz
 
-    def __init__(self, fields=None, win=None, env=None, opts={}, port=8097, server="localhost"):
+    def __init__(self, fields=None, win=None, env=None, opts={}, port=8097, server="localhost", log_to_filename=None):
         super(BaseVisdomLogger, self).__init__(fields)
         self.win = win
         self.env = env
         self.opts = opts
-        self._viz = visdom.Visdom(server="http://" + server, port=port)
+        self._viz = VISDOM_CONNECTIONS.add(server, port, log_to_filename)
 
     def log(self, *args, **kwargs):
         raise NotImplementedError(
@@ -65,10 +87,10 @@ class VisdomSaver(object):
         you probably only need one of these.
     '''
 
-    def __init__(self, envs=None, port=8097, server="localhost"):
+    def __init__(self, envs=None, port=8097, server="localhost", log_to_filename=None):
         super(VisdomSaver, self).__init__()
         self.envs = envs
-        self.viz = visdom.Visdom(server="http://" + server, port=port)
+        self.viz = VISDOM_CONNECTIONS.add(server, port, log_to_filename)
 
     def save(self, *args, **kwargs):
         self.viz.save(self.envs)
@@ -79,7 +101,7 @@ class VisdomLogger(BaseVisdomLogger):
         A generic Visdom class that works with the majority of Visdom plot types.
     '''
 
-    def __init__(self, plot_type, fields=None, win=None, env=None, opts={}, port=8097, server="localhost"):
+    def __init__(self, plot_type, fields=None, win=None, env=None, opts={}, port=8097, server="localhost", log_to_filename=None):
         '''
             Args:
                 fields: Currently unused
@@ -96,7 +118,7 @@ class VisdomLogger(BaseVisdomLogger):
                 >>> hist_logger = VisdomLogger('histogram', , opts=dict(title='Random!', numbins=20))
                 >>> hist_logger.log(hist_data)
         '''
-        super(VisdomLogger, self).__init__(fields, win, env, opts, port, server)
+        super(VisdomLogger, self).__init__(fields, win, env, opts, port, server, log_to_filename)
         self.plot_type = plot_type
         self.chart = getattr(self.viz, plot_type)
         self.viz_logger = self._viz_prototype(self.chart)
@@ -107,7 +129,7 @@ class VisdomLogger(BaseVisdomLogger):
 
 class VisdomPlotLogger(BaseVisdomLogger):
 
-    def __init__(self, plot_type, fields=None, win=None, env=None, opts={}, port=8097, server="localhost", name=None):
+    def __init__(self, plot_type, fields=None, win=None, env=None, opts={}, port=8097, server="localhost", name=None, log_to_filename=None):
         '''
             Multiple lines can be added to the same plot with the "name" attribute (see example)
             Args:
@@ -119,7 +141,7 @@ class VisdomPlotLogger(BaseVisdomLogger):
                 >>> scatter_logger.log(stats['epoch'], loss_meter.value()[0], name="train")
                 >>> scatter_logger.log(stats['epoch'], loss_meter.value()[0], name="test")
         '''
-        super(VisdomPlotLogger, self).__init__(fields, win, env, opts, port, server)
+        super(VisdomPlotLogger, self).__init__(fields, win, env, opts, port, server, log_to_filename)
         valid_plot_types = {
             "scatter": self.viz.scatter,
             "line": self.viz.line}
@@ -182,9 +204,9 @@ class VisdomTextLogger(BaseVisdomLogger):
     valid_update_types = ['REPLACE', 'APPEND']
 
     def __init__(self, fields=None, win=None, env=None, opts={}, update_type=valid_update_types[0],
-                 port=8097, server="localhost"):
+                 port=8097, server="localhost", log_to_filename=None):
 
-        super(VisdomTextLogger, self).__init__(fields, win, env, opts, port, server)
+        super(VisdomTextLogger, self).__init__(fields, win, env, opts, port, server, log_to_filename)
         self.text = ''
 
         if update_type not in self.valid_update_types:
