@@ -3,6 +3,7 @@ import torchnet as tnt
 from torchnet.logger import VisdomPlotLogger, VisdomLogger
 from . import MeterLogger
 from .. import meter as Meter
+import numpy as np
 
 class VisdomMeterLogger(MeterLogger):
     ''' A class to package and visualize meters.
@@ -25,6 +26,15 @@ class VisdomMeterLogger(MeterLogger):
         self.log_to_filename = log_to_filename
 
     def __addlogger(self, meter, ptype):
+        if ptype == 'stacked_line':
+            opts = {'title': self.title + ' ' + meter + ' (train)', 'fillarea': True, 'legend': self.meter[meter].keys}
+            self.logger['Train'][meter] = VisdomPlotLogger(ptype, env=self.env, server=self.server,
+                                                           port=self.port, log_to_filename=self.log_to_filename,
+                                                           opts=opts)
+            opts = {'title':self.title + ' ' + meter + ' (test)', 'fillarea': True, 'legend': self.meter[meter].keys}
+            self.logger['Test'][meter] = VisdomPlotLogger(ptype, env=self.env, server=self.server,
+                                                           port=self.port, log_to_filename=self.log_to_filename,
+                                                           opts=opts)
         if ptype == 'line':
             if self.plotstylecombined:
                 opts = {'title': self.title + ' ' + meter}
@@ -65,16 +75,22 @@ class VisdomMeterLogger(MeterLogger):
             self.__addlogger(meter_name, 'heatmap')
         elif isinstance(meter, Meter.MSEMeter):
             self.__addlogger(meter_name, 'line')
-        elif isinstance(meter, Meter.ValueSummaryMeter):
+        elif type(meter) == Meter.ValueSummaryMeter:
             self.__addlogger(meter_name, 'line')
+        elif isinstance(meter, Meter.MultiValueSummaryMeter):
+            self.__addlogger(meter_name, 'stacked_line')
 
     def reset_meter(self, iepoch, mode='Train'):
         self.timer.reset()
-        for key in self.meter.keys():
+        for key, meter in self.meter.items():
             val = self.meter[key].value()
             val = val[0] if isinstance(val, (list, tuple)) else val
-            if key in ['confusion', 'histogram', 'image']:
+            if isinstance(meter, Meter.ConfusionMeter) or \
+                key in ['histogram', 'image']:
                 self.logger[mode][key].log(val)
+            elif isinstance(self.meter[key], Meter.MultiValueSummaryMeter):
+                self.logger[mode][key].log( np.array([iepoch]*len(val)), np.array(np.cumsum(val)), name=mode) # keep mean
             else:
                 self.logger[mode][key].log(iepoch, val, name=mode)
             self.meter[key].reset()
+

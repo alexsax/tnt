@@ -91,6 +91,8 @@ class MeterLogger(object):
                 tval.extend([self.meter[meter_name].value()])
             elif isinstance(meter, Meter.ValueSummaryMeter) or isinstance(meter, Meter.MSEMeter):
                 pstr += "{}: {}".format(meter_name, self.meter[meter_name])
+            elif isinstance(meter, Meter.MultiValueSummaryMeter):
+                pstr += "{}: {}".format(meter_name, self.meter[meter_name])
             else:
                 warnings.warn("Can't print meter '{}' of type {}".format(meter_name, type(meter)),
                               RuntimeWarning)

@@ -1,5 +1,6 @@
 from .averagevaluemeter import AverageValueMeter
 from .valuesummarymeter import ValueSummaryMeter
+from .multivaluesummarymeter import MultiValueSummaryMeter
 from .classerrormeter import ClassErrorMeter
 from .confusionmeter import ConfusionMeter
 from .timemeter import TimeMeter

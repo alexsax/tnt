@@ -144,7 +144,8 @@ class VisdomPlotLogger(BaseVisdomLogger):
         super(VisdomPlotLogger, self).__init__(fields, win, env, opts, port, server, log_to_filename)
         valid_plot_types = {
             "scatter": self.viz.scatter,
-            "line": self.viz.line}
+            "line": self.viz.line,
+            "stacked_line": self.viz.line}
         self.plot_type = plot_type
         # Set chart type
         if plot_type not in valid_plot_types.keys():
@@ -158,20 +159,50 @@ class VisdomPlotLogger(BaseVisdomLogger):
                 raise ValueError("When logging to {}, must pass in x and y values (and optionally z).".format(
                     type(self)))
             x, y = args
-            self.chart(
-                X=np.array([x]),
-                Y=np.array([y]),
-                update='append',
-                win=self.win,
-                env=self.env,
-                opts=self.opts,
-                **kwargs)
+            x, y = [x], [y]
+            if self.plot_type == 'stacked_line':
+                name = kwargs.pop('name')
+                for i, (x, y) in enumerate(zip(*args)):
+                    self.chart(
+                        X=np.array([x]),
+                        Y=np.array([y]),
+                        update='append',
+                        name=self.opts['legend'][i],
+                        win=self.win,
+                        env=self.env,
+                        opts=self.update_opts,
+                        **kwargs)
+                # self.chart(
+                #     X=np.array([args[0]]),
+                #     Y=np.array([args[1]]),
+                #     update='append',
+                #     name=name,
+                #     win=self.win,
+                #     env=self.env,
+                #     opts=self.opts,
+                #     **kwargs)
+            else:
+                self.chart(
+                    X=np.array(x),
+                    Y=np.array(y),
+                    update='append',
+                    win=self.win,
+                    env=self.env,
+                    opts=self.opts,
+                    **kwargs)
         else:
             if self.plot_type == 'scatter':
                 chart_args = {'X': np.array([args])}
-            else:
+            elif self.plot_type == 'line':
                 chart_args = {'X': np.array([args[0]]),
                               'Y': np.array([args[1]])}
+            elif self.plot_type == 'stacked_line':
+                chart_args = {'X': np.array([args[0]]),
+                              'Y': np.array([args[1]])}
+                self.update_opts = {k: v for k, v in self.opts.items()}
+                self.update_opts.pop('legend')
+            else:
+                raise NotImplementedError("Plot type: {}".format(self.plot_type))
             self.win = self.chart(
                 win=self.win,
                 env=self.env,
