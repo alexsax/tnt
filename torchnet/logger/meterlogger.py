@@ -3,7 +3,6 @@ import torch
 import warnings 
 
 from .. import meter as Meter
-from torchnet.logger import VisdomPlotLogger, VisdomLogger
 
 class MeterLogger(object):
     ''' A class to package and print meters. '''
